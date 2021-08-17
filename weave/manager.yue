@@ -1,0 +1,55 @@
+class Manager
+  new: =>
+    @threads = {}
+    @errors = {}
+
+  -- call this in love.update
+  update: (dt) =>
+    for k, v in pairs @threads
+      @errors[k] = v.thr\getError!
+
+      -- check if they're quitting
+      msg = v.rcv\pop!
+      if msg and msg.exit
+        @threads[k] = nil
+        @errors[k] = nil
+      elseif msg and msg.err
+        @errors[k] = msg.err
+
+    nil
+
+  createThread: (name, src) =>
+    if @threads[name]
+      return error "thread already exists"
+
+    @threads[name] =
+      thr: love.thread.newThread src
+      ch: love.thread.getChannel "#{ name }_queue"
+      rcv: love.thread.getChannel "#{ name }_notify"
+
+    @threads[name].thr\start!
+    nil
+
+  getError: (name) =>
+    @errors[name]
+
+  has: (name) =>
+    @threads[name] != nil
+
+  kill: (name) =>
+    if not @threads[name]
+      return error "thread does not exist"
+
+    @threads[name].thr\kill!
+    @threads[name] = nil
+
+  send: (threadName, recv, ...) =>
+    if not @threads[threadName]
+      return error "thread does not exist"
+
+    @threads[threadName].ch\push {
+      args: { ... },
+      recv: recv,
+    }
+
+return Manager

@@ -1,0 +1,7 @@
+cpkg = (...)\gsub('%.init$', '') .. "."
+
+weave =
+  Thread: require "#{cpkg}thread",
+  Manager: require "#{cpkg}manager",
+
+weave

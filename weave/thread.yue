@@ -1,0 +1,40 @@
+--
+
+unpack = unpack or table.unpack
+
+class Thread
+  new: (name) =>
+    @name = name
+    @channel = love.thread.getChannel "#{ name }_queue"
+    @notify = love.thread.getChannel "#{ name }_notify"
+    @exit = false
+    @handler = nil
+
+  setHandler: (fn) =>
+    @handler = fn
+
+  destroy: =>
+    @exit = true
+    @notify\push exit: true
+    @channel\clear!
+
+    @notify = nil
+    @channel = nil
+    @handler = nil
+    nil
+
+  read: =>
+    msg = @channel\demand!
+
+    if not msg
+      -- shouldn't happen, but.. let's pretend it might
+      error "thread(#{ @name }): demanded a message, but nothing received"
+    
+    r = @.handler self, unpack msg.args
+    msg.recv?\push r
+
+  run: =>
+    while not @exit
+      @\read!
+
+return Thread
